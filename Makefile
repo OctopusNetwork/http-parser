@@ -64,6 +64,7 @@ INSTALL ?= install
 PREFIX ?= /usr/local
 LIBDIR = $(PREFIX)/lib
 INCLUDEDIR = $(PREFIX)/include
+INTERMEDIATEDIR = $(PREFIX)/.intermediate/3rd/http-parser
 
 ifeq (darwin,$(PLATFORM))
 LDFLAGS_LIB += -Wl,-install_name,$(LIBDIR)/$(SONAME)
@@ -98,7 +99,7 @@ bench.o: bench.c http_parser.h Makefile
 	$(CC) $(CPPFLAGS_BENCH) $(CFLAGS_BENCH) -c bench.c -o $@
 
 http_parser.o: http_parser.c http_parser.h Makefile
-	$(CC) $(CPPFLAGS_FAST) $(CFLAGS_FAST) -c http_parser.c
+	$(CC) $(CPPFLAGS_FAST) $(CFLAGS_FAST) -c http_parser.c -o $(INTERMEDIATEDIR)/http_parser.o
 
 test-run-timed: test_fast
 	while(true) do time $(HELPER) ./test_fast$(BINEXT) > /dev/null; done
@@ -107,13 +108,14 @@ test-valgrind: test_g
 	valgrind ./test_g
 
 libhttp_parser.o: http_parser.c http_parser.h Makefile
-	$(CC) $(CPPFLAGS_FAST) $(CFLAGS_LIB) -c http_parser.c -o libhttp_parser.o
+	$(CC) $(CPPFLAGS_FAST) $(CFLAGS_LIB) -c http_parser.c -o $(INTERMEDIATEDIR)/libhttp_parser.o
 
 library: libhttp_parser.o
 	$(CC) $(LDFLAGS_LIB) -o $(LIBNAME) $<
 
 package: http_parser.o
-	$(AR) rcs libhttp_parser.a http_parser.o
+	$(AR) rcs $(LIBDIR)/libhttp_parser.a $(INTERMEDIATEDIR)/http_parser.o
+	$(INSTALL) -D http_parser.h $(DESTDIR)$(INCLUDEDIR)/http_parser.h
 
 url_parser: http_parser.o contrib/url_parser.c
 	$(CC) $(CPPFLAGS_FAST) $(CFLAGS_FAST) $^ -o $@
